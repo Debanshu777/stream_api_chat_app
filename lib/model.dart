@@ -19,6 +19,18 @@ class ChatModel extends ChangeNotifier {
 
   Client get client => _client;
   Client _client; //main access to the API gives us Access to http events
+  String _channelName;
+  Channel _currentChannel;
+  String get channelNmae => _channelName;
+  set channeLName(String value) {
+    _channelName = value;
+    notifyListeners();
+  }
+
+  set currentChannel(Channel channel) {
+    _currentChannel = channel;
+    notifyListeners();
+  }
 }
 
 Future<String> provider(String id) async {

@@ -1,7 +1,10 @@
+import 'dart:math';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:stream_api_chat_app/model.dart';
+import 'package:stream_api_chat_app/wigits.dart';
 import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
 void main() {
@@ -39,11 +42,6 @@ class MyHome extends StatelessWidget {
     "https://cdn3.iconfinder.com/data/icons/avatars-9/145/Avatar_Pig-512.png"
   ];
 
-  /// Construct a color from a hex code string, of the format #RRGGBB.
-  Color hexToColor(String code) {
-    return new Color(int.parse(code.substring(1, 7), radix: 16) + 0xFF000000);
-  }
-
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<ChatModel>(context);
@@ -65,43 +63,15 @@ class MyHome extends StatelessWidget {
             SizedBox(
               height: 50,
             ),
-            Form(
-              key: _formKey,
-              child: TextFormField(
-                controller: _controller,
-                style: TextStyle(
-                  color: Colors.white,
-                ),
-                keyboardType: TextInputType.text,
-                validator: (input) {
-                  if (input.isEmpty) {
-                    return "Enter some Text";
-                  }
-                  if (input.contains(RegExp(r"^([A-Za-z0-9]){4,20}$"))) {
-                    return null;
-                  }
-                  return "Can't contain special character or space";
-                },
-                decoration: InputDecoration(
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: new BorderRadius.circular(5.0),
-                    borderSide: BorderSide(color: Colors.white70),
-                  ),
-                  focusedBorder: new OutlineInputBorder(
-                    borderRadius: new BorderRadius.circular(5.0),
-                    borderSide: BorderSide(color: Colors.white70),
-                  ),
-                  labelText: "Enter a username",
-                  labelStyle: TextStyle(
-                    color: Colors.white70,
-                  ),
-                ),
-              ),
+            CustomForm(
+              controller: _controller,
+              formKey: _formKey,
+              hintText: "Enter username",
             ),
             SizedBox(
               height: 50,
             ),
-            GestureDetector(
+            CustomButton(
               onTap: () async {
                 if (_formKey.currentState.validate()) {
                   final user = _controller.text;
@@ -120,26 +90,8 @@ class MyHome extends StatelessWidget {
                   ));
                 }
               },
-              child: Container(
-                alignment: Alignment.center,
-                width: MediaQuery.of(context).size.width,
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [
-                    hexToColor("#7991ad"),
-                    hexToColor("#6b839f"),
-                  ]),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  "Submit",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 17,
-                  ),
-                ),
-              ),
-            ),
+              text: "Submit",
+            )
           ],
         ),
       ),
@@ -148,8 +100,148 @@ class MyHome extends StatelessWidget {
 }
 
 class ChannelView extends StatelessWidget {
+  final TextEditingController _controller = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  final channels = List<Channel>();
+
+  Future<List<Channel>> getChannels(StreamChatState state) async {
+    final filter = {
+      "type": "Mobile_Chat",
+    };
+
+    final sort = [
+      SortOption(
+        "last_message_at",
+        direction: SortOption.DESC,
+      ),
+    ];
+
+    return await state.client
+        .queryChannels(
+          filter: filter,
+          sort: sort,
+        )
+        .first;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold();
+    final streamchat = StreamChat.of(context);
+    final client = streamchat.client;
+    final provider = Provider.of<ChatModel>(context);
+    var list = [
+      "https://cdn3.iconfinder.com/data/icons/avatars-9/145/Avatar_Penguin-512.png",
+      "https://cdn3.iconfinder.com/data/icons/avatars-9/145/Avatar_Panda-512.png",
+      "https://cdn3.iconfinder.com/data/icons/avatars-9/145/Avatar_Dog-512.png",
+      "https://cdn3.iconfinder.com/data/icons/avatars-9/145/Avatar_Alien-512.png",
+      "https://cdn3.iconfinder.com/data/icons/avatars-9/145/Avatar_Robot-512.png",
+      "https://cdn3.iconfinder.com/data/icons/avatars-9/145/Avatar_Pumpkin-512.png",
+      "https://cdn3.iconfinder.com/data/icons/avatars-9/145/Avatar_Pig-512.png"
+    ];
+    return Scaffold(
+        appBar: AppBar(
+          title: Text("Channel List"),
+          backgroundColor: Colors.blueGrey,
+          leading: Container(
+            padding: const EdgeInsets.all(10),
+            child: Hero(
+              tag: "logo",
+              child: Image.asset("assets/images/logo.png"),
+            ),
+          ),
+        ),
+        body: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Expanded(
+              child: FutureBuilder(
+                future: getChannels(streamchat),
+                builder: (_, AsyncSnapshot<List<Channel>> snapshot) {
+                  if (!snapshot.hasData) {
+                    return Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  }
+                  // clear list to avoid duplicates
+                  channels.clear();
+                  // repopulate list
+                  channels.addAll(snapshot.data);
+                  if (snapshot.data.length == 0) {
+                    return Container();
+                  }
+
+                  return ListView(
+                    scrollDirection: Axis.vertical,
+                    children: createListOfChannels(snapshot.data, context),
+                  );
+                },
+              ),
+            ),
+            CustomForm(
+              controller: _controller,
+              formKey: _formKey,
+              hintText: "Enter a Channel name",
+            ),
+            CustomButton(
+              onTap: () async {
+                if (_formKey.currentState.validate()) {
+                  final channelName = _controller.text;
+                  final channelTitles = channels.map((e) => e.cid).toList();
+                  _controller.clear();
+                  var randomItem = (list.toList()..shuffle()).first;
+                  final channel = client
+                      .channel("Mobile_Chat", id: channelName, extraData: {
+                    "image": "$randomItem",
+                  });
+                  if (!channelTitles.contains("Mobile_Chat:$channelName")) {
+                    await channel.create();
+                  }
+                  await channel.watch();
+                  provider.currentChannel = channel;
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => StreamChannel(
+                        child: ChatPage(),
+                        channel: channel,
+                      ),
+                    ),
+                  );
+                }
+              },
+              text: "Open Channel",
+            )
+          ],
+        ));
+  }
+}
+
+List<Widget> createListOfChannels(List<Channel> channels, context) {
+  final provider = Provider.of<ChatModel>(context);
+  return channels
+      .asMap()
+      .map((idx, chan) => MapEntry(
+          idx,
+          ListTile(
+            title: Text(
+                "Channel Title: ${chan.cid.replaceFirstMapped("Mobile_Chat:", (match) => "")}"),
+            subtitle: Text("Last Message at: ${chan.lastMessageAt}"),
+            trailing: Text("Peers: ${chan.state.members.length}"),
+            leading: CircleAvatar(
+              backgroundImage: NetworkImage(chan.extraData["image"] ??
+                  "https://cdn3.iconfinder.com/data/icons/avatars-9/145/Avatar_Penguin-512.png"),
+            ),
+            onLongPress: () async {
+              provider.currentChannel = chan;
+              await chan.delete();
+            },
+          )))
+      .values
+      .toList();
+}
+
+class ChatPage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container();
   }
 }
