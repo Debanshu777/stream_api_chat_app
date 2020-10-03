@@ -1,4 +1,8 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:stream_api_chat_app/model.dart';
+import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
 void main() {
   runApp(MyApp());
@@ -8,110 +12,144 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
-        primarySwatch: Colors.blue,
-        // This makes the visual density adapt to the platform that you run
-        // the app on. For desktop platforms, the controls will be smaller and
-        // closer together (more dense) than on mobile platforms.
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
-      home: MyHomePage(title: 'Flutter Demo Home Page'),
-    );
+    return ChangeNotifierProvider<ChatModel>(
+        create: (context) => ChatModel(),
+        child: MaterialApp(
+          home: MyHome(),
+          theme: ThemeData(
+            scaffoldBackgroundColor: Color(0xff1F1F1F),
+            fontFamily: "OverpassRegular",
+            visualDensity: VisualDensity.adaptivePlatformDensity,
+          ),
+          debugShowCheckedModeBanner: false,
+        ));
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  MyHomePage({Key key, this.title}) : super(key: key);
+class MyHome extends StatelessWidget {
+  final TextEditingController _controller = new TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  var list = [
+    "https://cdn3.iconfinder.com/data/icons/avatars-9/145/Avatar_Penguin-512.png",
+    "https://cdn3.iconfinder.com/data/icons/avatars-9/145/Avatar_Panda-512.png",
+    "https://cdn3.iconfinder.com/data/icons/avatars-9/145/Avatar_Dog-512.png",
+    "https://cdn3.iconfinder.com/data/icons/avatars-9/145/Avatar_Alien-512.png",
+    "https://cdn3.iconfinder.com/data/icons/avatars-9/145/Avatar_Robot-512.png",
+    "https://cdn3.iconfinder.com/data/icons/avatars-9/145/Avatar_Pumpkin-512.png",
+    "https://cdn3.iconfinder.com/data/icons/avatars-9/145/Avatar_Pig-512.png"
+  ];
 
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
-  @override
-  _MyHomePageState createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+  /// Construct a color from a hex code string, of the format #RRGGBB.
+  Color hexToColor(String code) {
+    return new Color(int.parse(code.substring(1, 7), radix: 16) + 0xFF000000);
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
+    final provider = Provider.of<ChatModel>(context);
     return Scaffold(
-      appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
+      resizeToAvoidBottomPadding: true,
+      body: Container(
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
         child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Invoke "debug painting" (press "p" in the console, choose the
-          // "Toggle Debug Paint" action from the Flutter Inspector in Android
-          // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
-          // to see the wireframe for each widget.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            Text(
-              'You have pushed the button this many times:',
+            Expanded(
+              child: Hero(
+                tag: "logo",
+                child: Container(
+                  width: 200.0,
+                  child: Image.asset("assets/images/logo.png"),
+                ),
+              ),
             ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headline4,
+            SizedBox(
+              height: 50,
+            ),
+            Form(
+              key: _formKey,
+              child: TextFormField(
+                controller: _controller,
+                style: TextStyle(
+                  color: Colors.white,
+                ),
+                keyboardType: TextInputType.text,
+                validator: (input) {
+                  if (input.isEmpty) {
+                    return "Enter some Text";
+                  }
+                  if (input.contains(RegExp(r"^([A-Za-z0-9]){4,20}$"))) {
+                    return null;
+                  }
+                  return "Can't contain special character or space";
+                },
+                decoration: InputDecoration(
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: new BorderRadius.circular(5.0),
+                    borderSide: BorderSide(color: Colors.white70),
+                  ),
+                  focusedBorder: new OutlineInputBorder(
+                    borderRadius: new BorderRadius.circular(5.0),
+                    borderSide: BorderSide(color: Colors.white70),
+                  ),
+                  labelText: "Enter a username",
+                  labelStyle: TextStyle(
+                    color: Colors.white70,
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(
+              height: 50,
+            ),
+            GestureDetector(
+              onTap: () async {
+                if (_formKey.currentState.validate()) {
+                  final user = _controller.text;
+                  final client = provider.client;
+                  var randomItem = (list.toList()..shuffle()).first;
+                  await client
+                      .setUserWithProvider(User(id: "id_$user", extraData: {
+                    "name": "$user",
+                    "image": "$randomItem",
+                  }));
+                  Navigator.of(context).pushReplacement(MaterialPageRoute(
+                    builder: (_) => StreamChat(
+                      child: ChannelView(),
+                      client: client,
+                    ),
+                  ));
+                }
+              },
+              child: Container(
+                alignment: Alignment.center,
+                width: MediaQuery.of(context).size.width,
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: [
+                    hexToColor("#7991ad"),
+                    hexToColor("#6b839f"),
+                  ]),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  "Submit",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 17,
+                  ),
+                ),
+              ),
             ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
+  }
+}
+
+class ChannelView extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold();
   }
 }
